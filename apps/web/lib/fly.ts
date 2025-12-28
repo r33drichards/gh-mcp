@@ -16,30 +16,30 @@ interface FlyMachine {
 /**
  * Check if the configured token is a machine-specific token (fm2_).
  * Machine tokens can only operate on an existing app, not create new apps.
+ *
+ * Token formats:
+ * - fm2_... : Direct machine token
+ * - FlyV1 fm2_... : Macaroon-wrapped machine token
  */
 export function isMachineToken(): boolean {
   const token = process.env.FLY_API_TOKEN;
-  return token?.startsWith('fm2_') ?? false;
+  if (!token) return false;
+
+  // Check for direct machine token or macaroon-wrapped machine token
+  return token.startsWith('fm2_') || token.startsWith('FlyV1 fm2_');
 }
 
 function validateFlyToken(token: string): void {
-  // Fly token prefixes:
+  // Fly token formats:
   // - fo1_ : Personal Access Token (full API access)
   // - fm2_ : Machine-specific token (limited to specific app)
-  // - FlyV1 : Deploy token (for flyctl deploy)
+  // - FlyV1 fm2_... : Macaroon-wrapped machine token
+  // - FlyV1 fo1_... : Macaroon-wrapped personal access token
 
-  if (token.startsWith('fm2_')) {
+  if (isMachineToken()) {
     console.log(
       'Using Machine-specific token (fm2_). App creation will be skipped - ' +
       'ensure the app already exists in Fly.io.'
-    );
-  }
-
-  if (token.startsWith('FlyV1 ')) {
-    throw new Error(
-      'FLY_API_TOKEN appears to be a Deploy token (FlyV1). ' +
-      'Deploy tokens cannot be used with the Machines API. ' +
-      'Please use a Machine token (fm2_) or Personal Access Token (fo1_) instead.'
     );
   }
 }
@@ -54,12 +54,16 @@ function getFlyAuthHeaders(): Record<string, string> {
   // Validate token format
   validateFlyToken(token);
 
-  // Log token prefix for debugging (safe - only shows first 10 chars)
-  const tokenPrefix = token.substring(0, 10);
+  // Log token prefix for debugging (safe - only shows first 15 chars)
+  const tokenPrefix = token.substring(0, 15);
   console.log(`Using Fly API token starting with: ${tokenPrefix}...`);
 
+  // FlyV1 tokens (macaroon format) should be used directly without "Bearer" prefix
+  // Regular tokens (fo1_, fm2_) need the "Bearer" prefix
+  const authHeader = token.startsWith('FlyV1 ') ? token : `Bearer ${token}`;
+
   return {
-    Authorization: `Bearer ${token}`,
+    Authorization: authHeader,
     'Content-Type': 'application/json',
   };
 }
