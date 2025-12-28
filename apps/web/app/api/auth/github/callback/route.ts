@@ -49,6 +49,13 @@ export async function GET(request: Request) {
     }),
   });
 
+  if (!tokenResponse.ok) {
+    console.error('Token exchange failed:', tokenResponse.status, tokenResponse.statusText);
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=token_exchange_failed`
+    );
+  }
+
   const tokenData = await tokenResponse.json();
 
   if (tokenData.error) {
@@ -67,7 +74,22 @@ export async function GET(request: Request) {
     },
   });
 
+  if (!userResponse.ok) {
+    console.error('Failed to fetch user info:', userResponse.status, userResponse.statusText);
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=user_fetch_failed`
+    );
+  }
+
   const userData = await userResponse.json();
+
+  // Validate required user data fields
+  if (!userData.id || !userData.login) {
+    console.error('Invalid user data from GitHub:', userData);
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=invalid_user_data`
+    );
+  }
 
   // Upsert user in Supabase
   const supabase = createAdminClient();

@@ -1,7 +1,21 @@
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
-const ENCRYPTION_KEY = process.env.SESSION_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+function getEncryptionKey(): string {
+  const key = process.env.SESSION_ENCRYPTION_KEY;
+
+  if (!key) {
+    throw new Error('SESSION_ENCRYPTION_KEY environment variable is required');
+  }
+
+  // Validate key length: must be 64-char hex string (32 bytes)
+  if (!/^[a-fA-F0-9]{64}$/.test(key)) {
+    throw new Error('SESSION_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
+  }
+
+  return key;
+}
+
 const ALGORITHM = 'aes-256-gcm';
 
 interface SessionData {
@@ -15,7 +29,7 @@ interface SessionData {
 
 function encrypt(data: string): string {
   const iv = crypto.randomBytes(16);
-  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
+  const key = Buffer.from(getEncryptionKey(), 'hex');
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
   let encrypted = cipher.update(data, 'utf8', 'hex');
@@ -30,7 +44,7 @@ function decrypt(encryptedData: string): string {
   const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
   const iv = Buffer.from(ivHex, 'hex');
   const authTag = Buffer.from(authTagHex, 'hex');
-  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
+  const key = Buffer.from(getEncryptionKey(), 'hex');
 
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
