@@ -5,6 +5,7 @@ import { setSession } from '@/lib/auth/session';
 
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const GITHUB_USER_URL = 'https://api.github.com/user';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://gh-mcp-web.vercel.app';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -14,13 +15,13 @@ export async function GET(request: Request) {
 
   if (error) {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=${error}`
+      `${APP_URL}/login?error=${error}`
     );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=missing_params`
+      `${APP_URL}/login?error=missing_params`
     );
   }
 
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
 
   if (state !== storedState) {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=invalid_state`
+      `${APP_URL}/login?error=invalid_state`
     );
   }
 
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
   if (!tokenResponse.ok) {
     console.error('Token exchange failed:', tokenResponse.status, tokenResponse.statusText);
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=token_exchange_failed`
+      `${APP_URL}/login?error=token_exchange_failed`
     );
   }
 
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
 
   if (tokenData.error) {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=${tokenData.error}`
+      `${APP_URL}/login?error=${tokenData.error}`
     );
   }
 
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
   if (!userResponse.ok) {
     console.error('Failed to fetch user info:', userResponse.status, userResponse.statusText);
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=user_fetch_failed`
+      `${APP_URL}/login?error=user_fetch_failed`
     );
   }
 
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
   if (!userData.id || !userData.login) {
     console.error('Invalid user data from GitHub:', userData);
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=invalid_user_data`
+      `${APP_URL}/login?error=invalid_user_data`
     );
   }
 
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
   if (dbError || !user) {
     console.error('Database error:', dbError);
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/login?error=db_error`
+      `${APP_URL}/login?error=db_error`
     );
   }
 
@@ -124,5 +125,5 @@ export async function GET(request: Request) {
     expiresAt: Date.now() + (expires_in || 28800) * 1000,
   });
 
-  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard`);
+  return NextResponse.redirect(`${APP_URL}/dashboard`);
 }
