@@ -35,10 +35,16 @@ export async function POST(
     await destroyMachine(FLY_APP_NAME, mcpUrl.fly_machine_id);
 
     // Mark as revoked
-    await supabase
+    const { error: updateError } = await supabase
       .from('mcp_urls')
       .update({ revoked_at: new Date().toISOString() })
       .eq('id', id);
+
+    if (updateError) {
+      console.error('Failed to mark URL as revoked:', updateError);
+      // Machine is already destroyed, but we should still report the database error
+      return NextResponse.json({ error: 'Machine destroyed but failed to update database' }, { status: 500 });
+    }
 
     return NextResponse.redirect(new URL('/dashboard', process.env.NEXT_PUBLIC_APP_URL!));
   } catch (error) {

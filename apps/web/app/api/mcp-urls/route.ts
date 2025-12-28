@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSession } from '@/lib/auth/session';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createMachine, createFlyApp } from '@/lib/fly';
+import { createMachine, createFlyApp, destroyMachine } from '@/lib/fly';
 import { GITHUB_SCOPES } from '@gh-mcp/shared';
 
 const FLY_APP_NAME = process.env.FLY_MCP_APP_NAME || 'gh-mcp-server';
@@ -64,6 +64,12 @@ export async function POST(request: Request) {
 
     if (dbError) {
       console.error('Database error:', dbError);
+      // Clean up the machine since database insert failed
+      try {
+        await destroyMachine(FLY_APP_NAME, machine.id);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup machine after database error:', cleanupError);
+      }
       return NextResponse.json({ error: 'Failed to save URL' }, { status: 500 });
     }
 
