@@ -10,6 +10,13 @@ let tokenState: TokenState = {
   expiresAt: Date.now() + 8 * 60 * 60 * 1000, // Assume 8 hours initially
 };
 
+export class TokenRefreshError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TokenRefreshError';
+  }
+}
+
 export async function getAccessToken(): Promise<string> {
   // If token expires in less than 5 minutes, refresh it
   if (tokenState.expiresAt - Date.now() < 5 * 60 * 1000) {
@@ -20,8 +27,7 @@ export async function getAccessToken(): Promise<string> {
 
 async function refreshToken(): Promise<void> {
   if (!tokenState.refreshToken) {
-    console.error('No refresh token available');
-    return;
+    throw new TokenRefreshError('No refresh token available');
   }
 
   try {
@@ -42,8 +48,7 @@ async function refreshToken(): Promise<void> {
     const data = await response.json();
 
     if (data.error) {
-      console.error('Token refresh error:', data.error);
-      return;
+      throw new TokenRefreshError(`Token refresh failed: ${data.error} - ${data.error_description || 'No description'}`);
     }
 
     tokenState = {
@@ -54,6 +59,9 @@ async function refreshToken(): Promise<void> {
 
     console.log('Token refreshed successfully');
   } catch (error) {
-    console.error('Failed to refresh token:', error);
+    if (error instanceof TokenRefreshError) {
+      throw error;
+    }
+    throw new TokenRefreshError(`Failed to refresh token: ${error}`);
   }
 }

@@ -11,6 +11,9 @@ import { getAccessToken } from './token.js';
 const PORT = parseInt(process.env.PORT || '3000');
 const SECRET_TOKEN = process.env.SECRET_TOKEN;
 
+// Track active SSE connections by sessionId
+const activeTransports = new Map<string, SSEServerTransport>();
+
 // MCP Server setup
 function createMcpServer() {
   const server = new Server(
@@ -113,6 +116,16 @@ async function executeCommand(
 
     let stdout = '';
     let stderr = '';
+    let completed = false;
+
+    // Timeout after 5 minutes
+    const timeoutId = setTimeout(() => {
+      if (!completed) {
+        completed = true;
+        child.kill();
+        reject(new Error('Command timed out after 5 minutes'));
+      }
+    }, 5 * 60 * 1000);
 
     child.stdout.on('data', (data) => {
       stdout += data.toString();
@@ -123,6 +136,9 @@ async function executeCommand(
     });
 
     child.on('close', (code) => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timeoutId);
       if (code === 0) {
         resolve(stdout || stderr);
       } else {
@@ -131,14 +147,11 @@ async function executeCommand(
     });
 
     child.on('error', (error) => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timeoutId);
       reject(error);
     });
-
-    // Timeout after 5 minutes
-    setTimeout(() => {
-      child.kill();
-      reject(new Error('Command timed out after 5 minutes'));
-    }, 5 * 60 * 1000);
   });
 }
 
@@ -146,6 +159,7 @@ async function executeCommand(
 const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   const url = new URL(req.url || '/', `http://${req.headers.host}`);
   const pathToken = url.pathname.slice(1); // Remove leading /
+  const sessionId = url.searchParams.get('sessionId');
 
   // Health check
   if (url.pathname === '/health') {
@@ -154,26 +168,47 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
     return;
   }
 
-  // Validate secret token
-  if (SECRET_TOKEN && pathToken !== SECRET_TOKEN) {
+  // Validate secret token (check path starts with secret token)
+  if (SECRET_TOKEN && !pathToken.startsWith(SECRET_TOKEN)) {
     res.writeHead(404);
     res.end('Not found');
     return;
   }
 
-  // Handle SSE connection
+  // Handle SSE connection (GET establishes the SSE stream)
   if (req.method === 'GET') {
     const server = createMcpServer();
     const transport = new SSEServerTransport(url.pathname, res);
+
+    // Track this transport by sessionId for POST message routing
+    activeTransports.set(transport.sessionId, transport);
+
+    // Clean up when connection closes
+    transport.onclose = () => {
+      activeTransports.delete(transport.sessionId);
+    };
+
     await server.connect(transport);
     return;
   }
 
-  // Handle POST for messages
+  // Handle POST for messages - route to correct transport by sessionId
   if (req.method === 'POST') {
-    // SSE transport handles this via the connection
-    res.writeHead(200);
-    res.end();
+    if (!sessionId) {
+      res.writeHead(400);
+      res.end('Missing sessionId parameter');
+      return;
+    }
+
+    const transport = activeTransports.get(sessionId);
+    if (!transport) {
+      res.writeHead(404);
+      res.end('Session not found');
+      return;
+    }
+
+    // Route the POST message to the correct transport
+    await transport.handlePostMessage(req, res);
     return;
   }
 
