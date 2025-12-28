@@ -2,6 +2,19 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth/session';
 
+function getErrorMessage(error: string): string {
+  const errorMessages: Record<string, string> = {
+    db_error: 'Database connection failed. Please try again later.',
+    db_config_error: 'Server configuration error. Please contact support.',
+    missing_params: 'Authentication failed. Missing required parameters.',
+    invalid_state: 'Authentication failed. Please try logging in again.',
+    token_exchange_failed: 'Failed to authenticate with GitHub. Please try again.',
+    user_fetch_failed: 'Failed to fetch your GitHub profile. Please try again.',
+    invalid_user_data: 'Invalid response from GitHub. Please try again.',
+  };
+  return errorMessages[error] || `Authentication error: ${error}`;
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -20,7 +33,7 @@ export default async function LoginPage({
 
       {error && (
         <div style={{ color: 'red', marginBottom: '1rem' }}>
-          Error: {error}
+          {getErrorMessage(error)}
         </div>
       )}
 

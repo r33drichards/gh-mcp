@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient, SupabaseConfigError } from '@/lib/supabase/admin';
 import { setSession } from '@/lib/auth/session';
 
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -93,7 +93,18 @@ export async function GET(request: Request) {
   }
 
   // Upsert user in Supabase
-  const supabase = createAdminClient();
+  let supabase;
+  try {
+    supabase = createAdminClient();
+  } catch (error) {
+    if (error instanceof SupabaseConfigError) {
+      console.error('Supabase configuration error:', error.message);
+      return NextResponse.redirect(
+        `${APP_URL}/login?error=db_config_error`
+      );
+    }
+    throw error;
+  }
 
   const { data: user, error: dbError } = await supabase
     .from('users')
@@ -108,8 +119,15 @@ export async function GET(request: Request) {
     .select()
     .single();
 
-  if (dbError || !user) {
-    console.error('Database error:', dbError);
+  if (dbError) {
+    console.error('Database error:', dbError.message, dbError.code, dbError.details);
+    return NextResponse.redirect(
+      `${APP_URL}/login?error=db_error`
+    );
+  }
+
+  if (!user) {
+    console.error('Database error: No user returned from upsert');
     return NextResponse.redirect(
       `${APP_URL}/login?error=db_error`
     );
