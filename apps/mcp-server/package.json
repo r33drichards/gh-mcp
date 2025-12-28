@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@gh-mcp/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.89.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

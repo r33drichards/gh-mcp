@@ -23,6 +23,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0
         version: 1.25.1(hono@4.11.3)(zod@4.2.1)
+      '@supabase/supabase-js':
+        specifier: ^2.89.0
+        version: 2.89.0
     devDependencies:
       '@types/node':
         specifier: ^20.0.0

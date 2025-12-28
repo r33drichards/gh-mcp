@@ -7,6 +7,7 @@ import {
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { spawn } from 'child_process';
 import { getAccessToken } from './token.js';
+import { validateSecretToken } from './router.js';
 
 const PORT = parseInt(process.env.PORT || '3000');
 const SECRET_TOKEN = process.env.SECRET_TOKEN;
@@ -168,11 +169,22 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
     return;
   }
 
-  // Validate secret token (check path starts with secret token)
-  if (SECRET_TOKEN && !pathToken.startsWith(SECRET_TOKEN)) {
-    res.writeHead(404);
-    res.end('Not found');
-    return;
+  // Validate secret token
+  if (SECRET_TOKEN) {
+    // Direct mode: validate against environment variable
+    if (!pathToken.startsWith(SECRET_TOKEN)) {
+      res.writeHead(404);
+      res.end('Not found');
+      return;
+    }
+  } else {
+    // Router mode: validate token from path against Supabase
+    const isValid = await validateSecretToken(pathToken);
+    if (!isValid) {
+      res.writeHead(404);
+      res.end('Not found');
+      return;
+    }
   }
 
   // Handle SSE connection (GET establishes the SSE stream)
