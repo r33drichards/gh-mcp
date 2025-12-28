@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "db:verify": "npx tsx scripts/migrate.ts",
+    "build": "npm run db:verify && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -20,6 +21,7 @@
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.0"
   }
 }
