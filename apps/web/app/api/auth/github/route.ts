@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID!,
-    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/github/callback`,
+    redirect_uri: `https://gh-mcp-web.vercel.app/api/auth/github/callback`,
     scope: scopes.join(' '),
     state,
   });
