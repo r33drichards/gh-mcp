@@ -1,0 +1,16 @@
+{
+  "name": "gh-mcp",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "dev:web": "pnpm --filter @gh-mcp/web dev",
+    "dev:mcp": "pnpm --filter @gh-mcp/mcp-server dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
