@@ -13,6 +13,15 @@ interface FlyMachine {
   state: string;
 }
 
+/**
+ * Check if the configured token is a machine-specific token (fm2_).
+ * Machine tokens can only operate on an existing app, not create new apps.
+ */
+export function isMachineToken(): boolean {
+  const token = process.env.FLY_API_TOKEN;
+  return token?.startsWith('fm2_') ?? false;
+}
+
 function validateFlyToken(token: string): void {
   // Fly token prefixes:
   // - fo1_ : Personal Access Token (full API access)
@@ -20,11 +29,9 @@ function validateFlyToken(token: string): void {
   // - FlyV1 : Deploy token (for flyctl deploy)
 
   if (token.startsWith('fm2_')) {
-    console.warn(
-      'WARNING: FLY_API_TOKEN appears to be a Machine-specific token (fm2_). ' +
-      'These tokens can only operate on a specific app and cannot create new apps. ' +
-      'For full API access, use a Personal Access Token (fo1_) instead. ' +
-      'Generate one at: https://fly.io/user/personal_access_tokens'
+    console.log(
+      'Using Machine-specific token (fm2_). App creation will be skipped - ' +
+      'ensure the app already exists in Fly.io.'
     );
   }
 
@@ -32,8 +39,7 @@ function validateFlyToken(token: string): void {
     throw new Error(
       'FLY_API_TOKEN appears to be a Deploy token (FlyV1). ' +
       'Deploy tokens cannot be used with the Machines API. ' +
-      'Please use a Personal Access Token (fo1_) instead. ' +
-      'Generate one at: https://fly.io/user/personal_access_tokens'
+      'Please use a Machine token (fm2_) or Personal Access Token (fo1_) instead.'
     );
   }
 }
@@ -59,6 +65,13 @@ function getFlyAuthHeaders(): Record<string, string> {
 }
 
 export async function createFlyApp(name: string): Promise<void> {
+  // Machine tokens (fm2_) cannot create apps - they can only operate on existing apps
+  // Skip app creation if using a machine token
+  if (isMachineToken()) {
+    console.log(`Using machine token - skipping app creation. App "${name}" must already exist.`);
+    return;
+  }
+
   const orgSlug = process.env.FLY_ORG_SLUG || 'personal';
   console.log(`Creating Fly app "${name}" in org "${orgSlug}"`);
 
@@ -78,7 +91,7 @@ export async function createFlyApp(name: string): Promise<void> {
     if (response.status === 401) {
       throw new Error(
         `Fly API authentication failed (401). Please verify your FLY_API_TOKEN is valid and has not expired. ` +
-        `Token should be a Fly.io API token (usually starting with 'fo1_' for personal access tokens). ` +
+        `Token should be a Fly.io API token (fo1_ for personal access tokens, or fm2_ for machine tokens). ` +
         `API response: ${responseText}`
       );
     }
