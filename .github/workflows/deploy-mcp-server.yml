@@ -6,6 +6,10 @@ on:
       - main
     paths:
       - 'apps/mcp-server/**'
+      - 'packages/shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/deploy-mcp-server.yml'
   workflow_dispatch:
 
@@ -16,9 +20,6 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/mcp-server
 
     steps:
       - name: Checkout
@@ -38,7 +39,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: apps/mcp-server
+          context: .
+          file: apps/mcp-server/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.FLY_APP_NAME }}:latest
