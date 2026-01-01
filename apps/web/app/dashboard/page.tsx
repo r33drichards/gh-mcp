@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth/session';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { McpUrl } from '@gh-mcp/shared';
+import { CopyButton } from './CopyButton';
 
 async function getMcpUrls(userId: string): Promise<McpUrl[]> {
   const supabase = createAdminClient();
@@ -98,13 +99,7 @@ export default async function DashboardPage() {
                     <code style={{ fontSize: '0.875rem', backgroundColor: '#f5f5f5', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
                       https://{mcpDomain}/{url.secret_token.slice(0, 8)}...
                     </code>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(`https://${mcpDomain}/${url.secret_token}`)}
-                      style={{ marginLeft: '0.5rem', cursor: 'pointer', background: 'none', border: 'none' }}
-                      title="Copy full URL"
-                    >
-                      Copy
-                    </button>
+                    <CopyButton text={`https://${mcpDomain}/${url.secret_token}`} />
                   </td>
                   <td style={{ padding: '0.75rem' }}>{url.scopes.join(', ')}</td>
                   <td style={{ padding: '0.75rem' }}>{new Date(url.created_at).toLocaleDateString()}</td>
