@@ -74,7 +74,8 @@ export async function POST(request: Request) {
     }
 
     // Redirect back to dashboard
-    return NextResponse.redirect(new URL('/dashboard', process.env.NEXT_PUBLIC_APP_URL!));
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+    return NextResponse.redirect(new URL('/dashboard', baseUrl));
   } catch (error) {
     console.error('Error creating MCP URL:', error);
     return NextResponse.json({ error: 'Failed to create MCP URL' }, { status: 500 });
