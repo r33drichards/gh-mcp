@@ -6,7 +6,7 @@ import { createMachine, createFlyApp, destroyMachine } from '@/lib/fly';
 import { GITHUB_SCOPES } from '@gh-mcp/shared';
 
 const FLY_APP_NAME = process.env.FLY_MCP_APP_NAME || 'gh-mcp-server';
-const MCP_SERVER_IMAGE = process.env.MCP_SERVER_IMAGE || 'ghcr.io/your-org/gh-mcp-server:latest';
+const MCP_SERVER_IMAGE = process.env.MCP_SERVER_IMAGE || 'registry.fly.io/gh-mcp-server:latest';
 
 function generateSecretToken(): string {
   // 256-bit random, base62 encoded
