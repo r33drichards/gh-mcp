@@ -1,0 +1,55 @@
+name: Deploy MCP Server
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/mcp-server/**'
+      - '.github/workflows/deploy-mcp-server.yml'
+  workflow_dispatch:
+
+env:
+  FLY_APP_NAME: gh-mcp-server
+  REGISTRY: registry.fly.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mcp-server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Authenticate with Fly Registry
+        run: flyctl auth docker
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/mcp-server
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.FLY_APP_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.FLY_APP_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image info
+        run: |
+          echo "Image pushed to:"
+          echo "  ${{ env.REGISTRY }}/${{ env.FLY_APP_NAME }}:latest"
+          echo "  ${{ env.REGISTRY }}/${{ env.FLY_APP_NAME }}:${{ github.sha }}"
+          echo ""
+          echo "Set MCP_SERVER_IMAGE=${{ env.REGISTRY }}/${{ env.FLY_APP_NAME }}:latest in your web app environment"
